@@ -1,0 +1,23 @@
+Package: cartoPOO
+Type: Package
+Title: A POO approach to cartography
+Version: 0.2
+Date: 2013-05-25
+Author: Joel Gombin
+Maintainer: Joel Gombin <joel.gombin@gmail.com>
+Description: This package makes some cartographic S4 classes and methods
+    available.
+License: GPL(>=2.0)
+Depends:
+    maptools,
+    RColorBrewer,
+    spatialkernel,
+    fields,
+    plotrix,
+    classInt,
+    ggplot2,
+    plyr,
+    Hmisc,
+    methods
+Collate:
+    'carto_class.R'

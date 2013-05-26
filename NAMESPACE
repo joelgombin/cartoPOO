@@ -1,0 +1,5 @@
+exportClasses(map)
+exportClasses(map.choropleth)
+exportClasses(map.flow)
+exportClasses(map.loess)
+exportClasses(map.tps)
