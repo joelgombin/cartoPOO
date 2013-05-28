@@ -5,11 +5,10 @@ setOldClass("Krig")
 #' 
 #' The \code{map} class allows maps to be treated as objects, on which methods can be applied to transform them. It has several sub-classes, and new methods or sub-classes can be contributed to this package.
 #' 
-#' @name map
-#' @rdname map
+#' @name map-class
+#' @rdname map-class
 #' @exportClass map
 #' @author Joel Gombin
-#' @aliases map-class
 #' @section Slots:
 #' \describe{
 #'    \item{\code{sp}:}{An object of \code{SpatialPolygonsDataFrame} class, with at least an ID variable in the \code{data.frame}.}
@@ -26,8 +25,8 @@ setClass("map",
 #' 
 #' The \code{map.choropleth} class is a sub-class of the \code{map} class, for choropleth maps.
 #' 
-#' @name map.choropleth
-#' @rdname map.choropleth
+#' @name map.choropleth-class
+#' @rdname map.choropleth-class
 #' @exportClass map.choropleth
 #' @author Joel Gombin
 #' @aliases map.choropleth-class

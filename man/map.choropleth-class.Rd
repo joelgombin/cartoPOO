@@ -1,6 +1,11 @@
-\name{map.choropleth}
-\alias{map.choropleth}
+\name{map.choropleth-class}
+\alias{initialize}
+\alias{initialize,map.choropleth-method}
 \alias{map.choropleth-class}
+\alias{plot}
+\alias{plot,map.choropleth-method}
+\alias{show}
+\alias{show,map.choropleth-method}
 \title{S4 class for choropleth maps}
 \description{
   The \code{map.choropleth} class is a sub-class of the

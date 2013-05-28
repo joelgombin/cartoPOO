@@ -21,3 +21,4 @@ Depends:
     methods
 Collate:
     'carto_class.R'
+    'carto_functions.R'

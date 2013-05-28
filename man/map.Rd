@@ -1,21 +1,28 @@
 \name{map}
 \alias{map}
-\alias{map-class}
-\title{S4 class for maps}
-\description{
-  The \code{map} class allows maps to be treated as
-  objects, on which methods can be applied to transform
-  them. It has several sub-classes, and new methods or
-  sub-classes can be contributed to this package.
+\title{Create a \code{map} object}
+\usage{
+  map(sp, data)
 }
-\section{Slots}{
-  \describe{ \item{\code{sp}:}{An object of
-  \code{SpatialPolygonsDataFrame} class, with at least an
-  ID variable in the \code{data.frame}.}
-  \item{\code{data}:}{A \code{data.frame}, with the data to
-  be mapped.} }
+\arguments{
+  \item{sp}{an object of class
+  \code{SpatialPolygonsDataFrame}.}
+
+  \item{data}{an object of class \code{data.frame}.}
+}
+\value{
+  An object of class \code{map}.
+}
+\description{
+  \code{map} creates a \code{map} object from a
+  \code{SpatialPolygonsDataFrame} and a \code{data.frame}.
+  This object can then be used by several functions.
 }
 \author{
   Joel Gombin
+}
+\seealso{
+  \code{\link{choropleth}}, \code{\link{Tps}},
+  \code{\link{loess}}, \code{\link{flow}}
 }
 
