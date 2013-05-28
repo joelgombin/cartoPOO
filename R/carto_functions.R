@@ -42,9 +42,9 @@ setGeneric("choropleth", function(map, ...) standardGeneric("choropleth"))
 #' @rdname choropleth-methods
 setMethod(f="choropleth", 
           signature = "map",
-          definition = function(map, varname, sp.key, data.key, cut.nb=6, cut.method="sd", palette="Greys", NA.white=TRUE, borders="black", order ="normal") {
+          definition = function(map, varname, sp.key, data.key, cut.nb=6, cut.method="sd", palette="Greys", NA.white=TRUE, borders="black", order ="normal", margins=c(1,1,1,1)) {
             
-            new("map.choropleth", sp=map@sp, data=map@data, varname=varname, sp.key=sp.key, data.key=data.key, cut.nb=cut.nb, cut.method=cut.method, palette=palette, NA.white=NA.white, borders=borders, order=order)
+            new("map.choropleth", sp=map@sp, data=map@data, varname=varname, sp.key=sp.key, data.key=data.key, cut.nb=cut.nb, cut.method=cut.method, palette=palette, NA.white=NA.white, borders=borders, order=order, margins=margins)
           })
 
 
@@ -66,7 +66,7 @@ setMethod("show", "map.choropleth", function(object) {
 
 setMethod(f="initialize",
           signature="map.choropleth",
-          definition = function(.Object, sp, data, varname, sp.key, data.key, cut.nb, cut.method, palette, NA.white, borders,order) {
+          definition = function(.Object, sp, data, varname, sp.key, data.key, cut.nb, cut.method, palette, NA.white, borders, order, margins) {
   # merging datasets
   tmp <- data[, c(data.key, varname)]
   sp@data$rgrs.temp.sort.var <- 1:nrow(sp@data) # let's create an index to make sure we keep the initial order 
@@ -110,6 +110,7 @@ setMethod(f="initialize",
   .Object@na.values <- na.values
   .Object@palette <- palette
   .Object@order <- order
+  .Object@margins <- margins
   return(.Object)
 })
 
@@ -122,6 +123,7 @@ setMethod(
   f="plot",
   signature="map.choropleth",
   definition=function(x,y,...) {
+    opar <- par(mar=x@margins)
     plot(x@sp, col = x@cols, border= x@borders, ...)
     if (sum(x@na.values) > 0) {
       if (x@NA.white==TRUE) {  
@@ -134,5 +136,26 @@ setMethod(
     if (length(x@legend) > 0) {
       plotLegend(x)
     }
+    par(opar)
   }
 )
+
+#' Set map margins
+#' 
+#' This method allows to set margins for maps. 
+#' 
+#' @param map a map.
+#' @param margins a vector of four numbers, the margins in number of lines. 
+#' @export
+#' @docType methods
+#' @rdname margins-methods
+setGeneric("margins", function(map, margins, ...) standardGeneric("margins"))
+
+#' @export
+#' @aliases margins,map.choropleth,numeric-method
+#' @rdname margins-methods
+
+setMethod("margins", c("map.choropleth","numeric"), function(map, margins) {
+  map@margins <- margins
+  return(map)
+})

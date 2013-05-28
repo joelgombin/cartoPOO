@@ -62,7 +62,8 @@ setClass(
     legend = "list",
     na.values = "logical",
     palette = "character",
-    order = "character"
+    order = "character",
+    margins = "numeric"
     ), 
   contains="map"
 )
