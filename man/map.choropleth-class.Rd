@@ -2,6 +2,7 @@
 \alias{initialize}
 \alias{initialize,map.choropleth-method}
 \alias{map.choropleth-class}
+\alias{map.loess}
 \alias{plot}
 \alias{plot,map.choropleth-method}
 \alias{show}
@@ -35,7 +36,9 @@
   variable to be plotted, with logical values. \code{TRUE}
   when the variable to be plotted is \code{NA}.}
   \item{\code{palette}:}{Name of the color palette to use.}
-  \item{\code{order}:}{Logical, "normal" or "reverse".} }
+  \item{\code{order}:}{Logical, "normal" or "reverse".}
+  \item{\code{margins}:}{A vector of numerics, the four
+  margins (in textlines) of the plot.} }
 }
 \author{
   Joel Gombin

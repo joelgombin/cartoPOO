@@ -396,3 +396,229 @@ setMethod(
     
   }
 )
+
+####### à reprendre
+
+#' @export
+#' @aliases initialize,map.loess-method
+#' @rdname map.loess-class
+
+
+setMethod(
+  f="initialize",
+  signature="map.loess",
+  definition=function(.Object, sp, data, varname, sp.key, data.key,contours,points,xrange,yrange,span,frame,palette, order) {
+    sp@data$n <- 1:nrow(sp@data)
+    tmp <- merge(sp@data, data, by.x = sp.key, by.y=data.key, all.x=T, all.y=F)
+    sp@data <- tmp[order(tmp$n,na.last=TRUE),]
+    sp <- sp[!is.na(sp@data[,varname]),]
+    coord <- coordinates(sp)
+    df <- data.frame(z=rep(0,dim(coord)[1]))
+    df$z <- as.numeric(sp@data[,varname]) #on récupère les valeurs de z
+    df$x <- coord[,1]
+    df$y <- coord[,2]
+    b <- bbox(frame)
+    inter <- loess(z ~ x + y + x*y, df, model=T, normalize = F, span = span, control=loess.control(surface="direct", statistics="approximate", trace.hat="approximate"))
+    x <- rep(seq(b[1,1], b[1,2], length=xrange), times = yrange)
+    y <- rep(seq(b[2,1], b[2,2], length=yrange), each = xrange)
+    spInter <- SpatialPoints(data.frame(x,y), proj4string=CRS(proj4string(sp))) #on crée une grille pour éliminer les points extrapolés en dehors du cadre
+    z <- predict(inter,coordinates(spInter))
+    contour <- over(spInter, frame) #la fonction qui évalue
+    dim(contour) <- c(xrange, yrange) #on transforme le vecteur en matrice
+    dim(z) <- c(xrange, yrange)
+    z[is.na(contour)]<-NA #on met des NA dans le résultat de SP pour les pixels en dehors du polygone
+    inter <- list()
+    inter$x <- seq(b[1,1], b[1,2], length=xrange)
+    inter$y <- seq(b[2,1], b[2,2], length=yrange)
+    inter$z <- z
+    
+    .Object@sp <- sp
+    .Object@data <- data
+    .Object@varname <- varname
+    .Object@sp.key <- sp.key
+    .Object@data.key <- data.key
+    .Object@contours <- contours
+    .Object@points <- points
+    .Object@xrange <- xrange
+    .Object@yrange <- yrange
+    .Object@frame <- frame
+    .Object@inter <- inter
+    .Object@df <- df
+    .Object@palette <- palette
+    .Object@legend <- list()
+    .Object@order <- order
+    return(.Object)
+  }
+)
+
+#' Create a smoothed map (loess method)
+#' 
+#' This method allows to create a map with the spatially-smoothed representation of a variable. 
+#' 
+#' @param map a map.
+#' @export
+#' @docType methods
+#' @rdname map.loess-methods
+
+setGeneric(
+  name="map.loess",
+  def=function(x, ...) {standardGeneric("map.loess")}
+)
+
+#' @export
+#' @aliases show,map.choropleth-method
+#' @rdname map.choropleth-class
+setMethod(
+  f="map.loess",
+  signature="map.choropleth",
+  definition=function(x, contours = FALSE,
+                      points=FALSE,
+                      xrange=40,
+                      yrange=40,
+                      span=0.75,
+                      frame=NA,
+                      palette="RdBu"
+  ) 
+  {
+    x@sp@data <- x@sp@data[,-match(x@varname,names(x@sp@data))]
+    if (!(class(frame) %in% c("SpatialPolygons","SpatialPolygonsDataFrame"))) {
+      gpclibPermit()
+      frame <- unionSpatialPolygons(x@sp, rep(1, length(x@sp)), avoidGEOS=T)
+    }
+    new(Class="choropleth.loess", sp=x@sp, data=x@data, varname=x@varname, sp.key=x@sp.key, data.key=x@data.key, order=x@order, contours=contours,points=points,xrange=xrange,yrange=yrange,span=span,frame=frame,palette=palette)
+  }
+)
+
+
+#' @export
+#' @aliases show,map.loess-method
+#' @rdname map.loess-class
+
+setMethod(
+  f="plot",
+  signature="map.loess",
+  definition=function(x,y,...) {
+    colors <- brewer.pal(6, x@palette) #couleur qu'on veut pour sa palette. Palette séquentielle ou divergente
+    if (x@order %in% "reverse") colors <- rev(colors)
+    pal <- colorRampPalette(colors)
+    pal.n <- pal(99)
+    image(x@inter, asp=1, xaxt="n", yaxt="n", bty="n", col=pal.n, useRaster=TRUE) #représente la grille interpolée (sans axes ni boîte)
+    plot(x@frame, add=TRUE) #on représente aussi le polygone extérieur
+    if (x@contours) contour(x@inter, add=T) #les contours des courbes
+    if (x@points) points(x=x@df$x,y=x@df$y) #les points de mesure initiaux
+    # carte.prop.legende2(at=seq(min(x@inter$z, na.rm=T), max(x@inter$z, na.rm=T),length.out=100), palette=pal.n, na.leg=F, posleg=x@posleg, unit = x@unit)
+    if (length(x@legend) > 0) plotLegend(x)
+  }
+)
+
+
+# TODO : créer un objet à partir de l'inset et distinguer sa représentation 
+#' Create insets of some subparts of the map
+#' 
+#' This method allows to create small maps (insets) of some subparts of the main map  
+#' 
+#' @param x a map.
+#' @param IDs List of vectors of the IDs of the polygons to be represented in each inset.
+#' @param coords Either a list of lists of the coordinates where the insets should be, or "locator" to interactively select the coordinates.
+#' @export
+#' @docType methods
+#' @rdname inset-methods
+setGeneric(
+  name="inset",
+  def=function(x, IDs, coords, ...) {standardGeneric("inset")}
+)
+
+#' @export
+#' @aliases show,inset-method
+#' @rdname inset-methods
+setMethod(
+  f="inset",
+  signature="map.choropleth",
+  definition=function(x, IDs, coords) {
+    # IDs est une liste de vecteurs d'identifiants. Chaque vecteur est un inset
+    # coords prend soit la valeur "locator", soit est une liste de liste de coordonnées
+    
+    coordsOK <- list()
+    if (!(coords %in% "locator")) {
+      coordsOK <- coords
+      c <- as.data.frame(coordsOK)
+      b <- as.data.frame(t(bbox(x@sp)))
+    } else {
+      c <- b <- as.data.frame(t(bbox(x@sp)))
+      coordsOK <- list()
+    }
+    plot(x, xlim=c(min(c$x,b$x)-0.05*(max(c$x,b$x)-min(c$x,b$x)), max(c$x,b$x)+0.05*(max(c$x,b$x)-min(c$x,b$x))), ylim=c(min(b$y,c$y)-0.05*(max(c$y,b$y)-min(c$y,b$y)),max(b$y,c$y)+0.05*(max(c$y,b$y)-min(c$y,b$y))))
+    inset.n <- list()
+    for (i in 1:length(IDs)) {
+      sub <- x@sp[x@sp@data[,x@sp.key] %in% IDs[[i]],]
+      b1 <- bbox(sub)
+      rect(xleft=b1["x","min"],ybottom=b1["y","min"],xright=b1["x","max"],ytop=b1["y","max"],border="grey")
+      if (coords %in% "locator") {
+        cat(paste0("Coordinates for inset no. ",i))
+        coordsOK[[i]] <- locator(2) 
+      }
+      coordsOK[[i]] <- as.data.frame(coordsOK[[i]])
+      if ((b1["x","max"]-b1["x","min"])/(b1["y","max"]-b1["y","min"]) < (max(coordsOK[[i]]$x)-min(coordsOK[[i]]$x))/(max(coordsOK[[i]]$y)-min(coordsOK[[i]]$y))) {
+        coordsOK[[i]][which.max(coordsOK[[i]]$x),"x"] <- coordsOK[[i]][which.min(coordsOK[[i]]$x),"x"] + (b1["x","max"]-b1["x","min"])/(b1["y","max"]-b1["y","min"]) * (max(coordsOK[[i]]$y)-min(coordsOK[[i]]$y))
+      } else {
+        coordsOK[[i]][which.max(coordsOK[[i]]$y),"y"] <- coordsOK[[i]][which.min(coordsOK[[i]]$y),"y"] + (b1["y","max"]-b1["y","min"])/(b1["x","max"]-b1["x","min"]) * (max(coordsOK[[i]]$x)-min(coordsOK[[i]]$x))
+      }
+      fx <- (b1["x","max"] - b1["x","min"]) / (max(coordsOK[[i]]$x)-min(coordsOK[[i]]$x))
+      fy <- (b1["y","max"] - b1["y","min"]) / (max(coordsOK[[i]]$y)-min(coordsOK[[i]]$y))
+      sub.df <- fortify(sub)
+      sub.df$long <- min(coordsOK[[i]]$x) + (sub.df$long - b1["x","min"]) / fx
+      sub.df$lat <- min(coordsOK[[i]]$y) + (sub.df$lat - b1["y","min"]) / fy
+      p1 <- function(df) Polygon(df[,c("long","lat")])
+      p2 <- function(l,id) Polygons(list(l),id)
+      p3 <- function(l) SpatialPolygons(l)
+      sub@polygons <- slot(p3(dlply(sub.df,"id",.fun=function(x) p2(p1(x[,c("long","lat")]),unique(x$id)))),"polygons")
+      sub@data <- sub@data[,-match(x@varname,names(sub@data))]
+      inset.n[[i]] <- choropleth(map(sub, x@data), varname=x@varname,sp.key=x@sp.key,data.key=x@data.key, cut.nb=length(x@cuts), cut.method=x@cut.method, palette=x@palette, borders=x@borders, NA.white=x@NA.white, order=x@order)
+      inset.n[[i]]@cuts <- x@cuts
+      inset.n[[i]]@col <- x@col
+      inset.n[[i]]@cols <- x@cols[x@sp@data[,x@sp.key] %in% IDs[[i]]]
+      plot(inset.n[[i]],add=TRUE)
+      xmin <- min(coordsOK[[i]]$x)-(0.05*(max(coordsOK[[i]]$x)-min(coordsOK[[i]]$x)))
+      ymin <- min(coordsOK[[i]]$y)-(0.05*(max(coordsOK[[i]]$y)-min(coordsOK[[i]]$y)))
+      xmax <- max(coordsOK[[i]]$x)+(0.05*(max(coordsOK[[i]]$x)-min(coordsOK[[i]]$x)))
+      ymax <- max(coordsOK[[i]]$y)+(0.05*(max(coordsOK[[i]]$x)-min(coordsOK[[i]]$x)))
+      rect(xmin, ymin, xmax, ymax,border="grey")
+      if ((xmax < b1["x","min"]) & (ymax < b1["y","min"])) {
+        lines(x=c(xmin,b1["x","min"]), y=c(ymax,b1["y","max"]),col="grey")
+        lines(x=c(xmax,b1["x","max"]), y=c(ymin,b1["y","min"]), col="grey")
+      }
+      if ((xmin < b1["x","min"]) & (xmax > b1["x","max"]) & (ymax < b1["y","min"])) {
+        lines(x=c(xmin,b1["x","min"]), y=c(ymax,b1["y","min"]),col="grey")
+        lines(x=c(xmax,b1["x","max"]), y=c(ymax,b1["y","min"]), col="grey")
+      }
+      if ((xmax < b1["x","min"]) & (((ymax > b1["y","min"]) & (ymax < b1["y","max"])) | ((ymin > b1["y","min"]) & (ymin < b1["y","max"])))) {
+        lines(x=c(xmax,b1["x","min"]), y=c(ymax,b1["y","max"]),col="grey")
+        lines(x=c(xmax,b1["x","min"]), y=c(ymin,b1["y","min"]), col="grey")
+      }
+      if ((xmax < b1["x","min"]) & (ymin > b1["y","max"])) {
+        lines(x=c(xmin,b1["x","min"]), y=c(ymin,b1["y","min"]),col="grey")
+        lines(x=c(xmax,b1["x","max"]), y=c(ymax,b1["y","max"]), col="grey")
+      }
+      if ((xmin > b1["x","max"]) & (ymin > b1["y","max"])) {
+        lines(x=c(xmin,b1["x","max"]), y=c(ymin,b1["y","max"]),col="grey")
+        lines(x=c(xmax,b1["x","max"]), y=c(ymin,b1["y","min"]), col="grey")
+      }
+      if ((xmin > b1["x","max"]) & (ymax > b1["y","max"]) & (ymin < b1["y","max"]) & (ymin > b1["y","min"])) {
+        lines(x=c(xmin,b1["x","max"]), y=c(ymax,b1["y","max"]),col="grey")
+        lines(x=c(xmin,b1["x","max"]), y=c(ymin,b1["y","min"]), col="grey")
+      }
+      if ((xmin > b1["x","max"]) & (ymin < b1["y","min"]) & ymax < b1["y","max"]) {
+        lines(x=c(xmin,b1["x","min"]), y=c(ymin,b1["y","min"]),col="grey")
+        lines(x=c(xmax,b1["x","max"]), y=c(ymax,b1["y","max"]), col="grey")
+      }
+      if ((xmin > b1["x","max"]) & (ymin < b1["y","min"]) & ymax > b1["y","max"]) {
+        lines(x=c(xmin,b1["x","max"]), y=c(ymin,b1["y","min"]),col="grey")
+        lines(x=c(xmin,b1["x","max"]), y=c(ymax,b1["y","max"]), col="grey")
+      }
+      if ((xmax < b1["x","min"]) & (xmin < b1["x","min"]) & (ymin < b1["y","min"]) & (ymax > b1["y","max"])) {
+        lines(x=c(xmax,b1["x","min"]), y=c(ymin,b1["y","min"]), col="grey")
+        lines(x=c(xmax,b1["x","min"]), y=c(ymax,b1["y","max"]), col="grey")
+      }
+    }
+  }
+)

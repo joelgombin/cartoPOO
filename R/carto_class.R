@@ -29,7 +29,6 @@ setClass("map",
 #' @rdname map.choropleth-class
 #' @exportClass map.choropleth
 #' @author Joel Gombin
-#' @aliases map.choropleth-class
 #' @seealso \code{\link{map}}, \code{\link{map.tps}}, \code{\link{map.loess}}
 #' @section Slots:
 #' \describe{
@@ -46,6 +45,7 @@ setClass("map",
 #'    \item{\code{na.values}:}{A vector, the same length as the variable to be plotted, with logical values. \code{TRUE} when the variable to be plotted is \code{NA}.}
 #'    \item{\code{palette}:}{Name of the color palette to use.}
 #'    \item{\code{order}:}{Logical, "normal" or "reverse".}
+#'    \item{\code{margins}:}{A vector of numerics, the four margins (in textlines) of the plot.}
 #'  }
 setClass(
   Class="map.choropleth",
@@ -123,11 +123,10 @@ setClass(
 #' 
 #' The \code{map.loess} class is a sub-class of the \code{map} class, for local-fitted (loess) maps. 
 #' 
-#' @name map.loess
-#' @rdname map.loess
+#' @name map.loess-class
+#' @rdname map.loess-class
 #' @exportClass map.loess
 #' @author Joel Gombin
-#' @aliases map.loess-class
 #' @seealso \code{\link{map}}, \code{\link{map.choropleth}}, \code{\link{map.tps}}
 #' @section Slots:
 #' \describe{
